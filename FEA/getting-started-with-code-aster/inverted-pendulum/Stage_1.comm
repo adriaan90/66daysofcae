@@ -1,0 +1,84 @@
+DEBUT(LANG='EN')
+
+mesh = LIRE_MAILLAGE(FORMAT='MED',
+                     UNITE=3)
+
+model = AFFE_MODELE(AFFE=(_F(GROUP_MA=('STEM', ),
+                             MODELISATION=('POU_D_T', ),
+                             PHENOMENE='MECANIQUE'),
+                          _F(GROUP_MA=('END_MASS', 'FIX'),
+                             MODELISATION=('DIS_T', ),
+                             PHENOMENE='MECANIQUE')),
+                    MAILLAGE=mesh)
+
+elemprop = AFFE_CARA_ELEM(DISCRET=_F(CARA='M_T_D_N',
+                                     GROUP_MA=('END_MASS', 'FIX'),
+                                     VALE=0.001),
+                          MODELE=model,
+                          POUTRE=_F(CARA=('HY', 'HZ'),
+                                    GROUP_MA=('STEM', ),
+                                    SECTION='RECTANGLE',
+                                    VALE=(7.9057, 15.8114)))
+
+mater = DEFI_MATERIAU(ELAS=_F(E=210000.0,
+                              NU=0.3,
+                              RHO=8e-09))
+
+fieldmat = AFFE_MATERIAU(AFFE=_F(MATER=(mater, ),
+                                 TOUT='OUI'),
+                         MAILLAGE=mesh)
+
+load0 = AFFE_CHAR_MECA(DDL_IMPO=_F(DRX=0.0,
+                                   DRY=0.0,
+                                   DRZ=0.0,
+                                   DX=0.0,
+                                   DY=0.0,
+                                   DZ=0.0,
+                                   GROUP_MA=('FIX', )),
+                       MODELE=model)
+
+ASSEMBLAGE(CARA_ELEM=elemprop,
+           CHAM_MATER=fieldmat,
+           CHARGE=(load0, ),
+           MATR_ASSE=(_F(MATRICE=CO('MASS'),
+                         OPTION='MASS_MECA'),
+                      _F(MATRICE=CO('RIGI'),
+                         OPTION='RIGI_MECA')),
+           MODELE=model,
+           NUME_DDL=CO('ndll'))
+
+massin = POST_ELEM(CARA_ELEM=elemprop,
+                   CHAM_MATER=fieldmat,
+                   MASS_INER=_F(TOUT='OUI'),
+                   MODELE=model,
+                   TITRE='massin')
+
+IMPR_TABLE(TABLE=massin,
+           UNITE=8)
+
+modes = CALC_MODES(CALC_FREQ=_F(NMAX_FREQ=8),
+                   MATR_MASS=MASS,
+                   MATR_RIGI=RIGI,
+                   OPTION='PLUS_PETITE',
+                   TYPE_RESU='DYNAMIQUE')
+
+IMPR_RESU(FORMAT='MED',
+          RESU=_F(NOM_CHAM=('DEPL', ),
+                  RESULTAT=modes),
+          UNITE=80)
+
+IMPR_RESU(FORMAT='RESULTAT',
+          RESU=_F(RESULTAT=modes,
+                  TOUT_CHAM='NON',
+                  TOUT_PARA='OUI'),
+          UNITE=2)
+
+IMPR_RESU(FORMAT='RESULTAT',
+          MODELE=model,
+          RESU=_F(FORM_TABL='EXCEL',
+                  NOM_PARA=('FREQ', 'MASS_GENE', 'MASS_EFFE_DX', 'MASS_EFFE_DY'),
+                  RESULTAT=modes,
+                  TOUT_CHAM='NON'),
+          UNITE=4)
+
+FIN()
