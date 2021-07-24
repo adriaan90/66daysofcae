@@ -1,0 +1,61 @@
+DEBUT(LANG='EN')
+
+mesh = LIRE_MAILLAGE(FORMAT='MED',
+                     UNITE=20)
+
+mesh1 = CREA_MAILLAGE(CREA_POI1=_F(GROUP_MA=('CIRCLE_MIDPOINT', ),
+                                   NOM_GROUP_MA=('GN_CIRCLE_MIDPOINT', )),
+                      MAILLAGE=mesh)
+
+model = AFFE_MODELE(AFFE=(_F(MODELISATION=('DKT', ),
+                             PHENOMENE='MECANIQUE',
+                             TOUT='OUI'),
+                          _F(GROUP_MA=('CIRCLE_MIDPOINT', ),
+                             MODELISATION=('DIS_T', ),
+                             PHENOMENE='MECANIQUE')),
+                    MAILLAGE=mesh)
+
+elemprop = AFFE_CARA_ELEM(COQUE=_F(EPAIS=0.003175,
+                                   GROUP_MA=('CIRCLE_MIDPOINT', 'CIRCLE', 'BACK', 'BRACKET')),
+                          DISCRET=_F(CARA='M_T_D_N',
+                                     GROUP_MA=('CIRCLE_MIDPOINT', ),
+                                     VALE=22.7),
+                          MODELE=model)
+
+mater = DEFI_MATERIAU(ELAS=_F(E=73770000000.0,
+                              NU=0.33,
+                              RHO=2770.0))
+
+fieldmat = AFFE_MATERIAU(AFFE=_F(MATER=(mater, ),
+                                 TOUT='OUI'),
+                         MAILLAGE=mesh)
+
+load = AFFE_CHAR_MECA(DDL_IMPO=_F(DX=0.0,
+                                  DY=0.0,
+                                  DZ=0.0,
+                                  GROUP_MA=('BACK', )),
+                      LIAISON_SOLIDE=_F(GROUP_MA=('CIRCLE_MIDPOINT', 'CIRCLE')),
+                      MODELE=model)
+
+ASSEMBLAGE(CARA_ELEM=elemprop,
+           CHAM_MATER=fieldmat,
+           CHARGE=(load, ),
+           MATR_ASSE=(_F(MATRICE=CO('MASS'),
+                         OPTION='MASS_MECA'),
+                      _F(MATRICE=CO('RIGI'),
+                         OPTION='RIGI_MECA')),
+           MODELE=model,
+           NUME_DDL=CO('ndll'))
+
+modes = CALC_MODES(CALC_FREQ=_F(NMAX_FREQ=10),
+                   MATR_MASS=MASS,
+                   MATR_RIGI=RIGI,
+                   OPTION='PLUS_PETITE',
+                   SOLVEUR_MODAL=_F(METHODE='TRI_DIAG'),
+                   TYPE_RESU='DYNAMIQUE')
+
+IMPR_RESU(FORMAT='MED',
+          RESU=_F(RESULTAT=modes),
+          UNITE=80)
+
+FIN()
